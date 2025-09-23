@@ -20,7 +20,7 @@ export default function ChainedPaths() {
       const L = path.getTotalLength();
       if (segment >= L) {
         path.setAttribute("stroke-dasharray", `${L} 0`);
-        path.setAttribute("stroke-dashoffset", "0");
+        path.setAttribute("stroke-dashoffset", "0"); 
         return resolve();
       }
 
