@@ -3,6 +3,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
 import { Arrow } from "@/components/ui/Arrow";
 
+interface gitToken {
+  valid: boolean;
+  missingScopes: string[];
+  scope?: string[];
+}
+
+interface vercelToken {
+  valid: boolean;
+  missingScopes: string[];
+}
+
 const Modal = ({
   reveal,
   setReveal,
@@ -12,17 +23,66 @@ const Modal = ({
 }) => {
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState<"next" | "prev">("next");
+  const [gitToken, setGitToken] = useState<string | null>(null);
+  const [vercelToken, setVercelToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [gitResult, setGitResult] = useState<gitToken | null>(null);
+  const [vercelResult, setVercelResult] = useState<vercelToken | null>(null);
 
   useEffect(() => {
     setStep(1);
   }, [reveal]);
+
+  async function checkTokens() {
+    setLoading(true);
+    setGitResult(null);
+    setVercelResult(null);
+
+    try {
+      if (!gitResult?.valid) {
+        const ghRes = await fetch("/api/check-github-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: gitToken }),
+        });
+        const ghData = await ghRes.json();
+        setGitResult(ghData);
+      }
+
+      if (!vercelResult?.valid) {
+        const vcRes = await fetch("/api/check-vercel-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: vercelToken }),
+        });
+        const vcData = await vcRes.json();
+        setVercelResult(vcData);
+      }
+    } catch (err) {
+      console.error(err);
+      if (!gitResult?.valid) {
+        setGitResult({
+          valid: false,
+          missingScopes: ["GitHub request failed"],
+        });
+      }
+      if (!vercelResult?.valid) {
+        setVercelResult({
+          valid: false,
+          missingScopes: ["Vercel request failed"],
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const handleNext = () => {
     if (step < 3) {
       setDirection("next");
       setStep(step + 1);
     } else {
-      setReveal(false);
+      checkTokens();
     }
   };
 
@@ -349,22 +409,183 @@ const Modal = ({
                         Your GitHub and Vercel keys are stored locally in your
                         browser — never sent to our servers.
                       </p>
-                      <div className="flex-1 w-full flex flex-col gap-2 justify-center items-center">
-                        <div className="w-full flex flex-col gap-1">
-                          {/* <p className="text-xs text-neutral-700">Input for GitHub PAT</p> */}
+                      <div className="flex-1 w-full flex flex-col gap-5 justify-center items-center">
+                        <div className="relative w-full flex">
                           <input
+                            value={gitToken || ""}
+                            onChange={({ target }) => {
+                              setGitToken(target.value);
+                              setGitResult(null);
+                            }}
                             type="text"
-                            placeholder="Ender your Github PAT"
-                            className="rounded-sm bg-neutral-950 text-xs border py-2 px-3 w-full border-neutral-800 outline-0"
+                            placeholder="Enter your Github PAT"
+                            className={`rounded-sm bg-neutral-950 text-xs border py-2 px-3 w-full ${
+                              gitResult
+                                ? gitResult?.valid
+                                  ? "border-green-800 text-green-800"
+                                  : "border-red-800 text-red-800"
+                                : "border-neutral-800"
+                            } outline-0`}
                           />
+
+                          {gitResult && !gitResult?.valid && (
+                            <p className="absolute text-red-800 -bottom-4 text-[0.6rem]">
+                              - {gitResult?.missingScopes}
+                            </p>
+                          )}
+
+                          <AnimatePresence>
+                            {(loading || gitResult) && (
+                              <motion.div
+                                key="loader"
+                                initial={{ opacity: 0, scale: 0 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0 }}
+                                className={`absolute -right-1.5 -bottom-1.5 p-1 rounded-full border ${
+                                  gitResult
+                                    ? gitResult.valid
+                                      ? "border-green-800 bg-neutral-950"
+                                      : "border-red-800 bg-neutral-950"
+                                    : "border-neutral-800 bg-neutral-950"
+                                }`}
+                              >
+                                {loading ? (
+                                  <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{
+                                      repeat: Infinity,
+                                      duration: 1,
+                                      ease: "linear",
+                                    }}
+                                    className="w-3 h-3 border-2 border-x-blue-500 border-gray-950 rounded-full"
+                                  />
+                                ) : (
+                                  gitResult &&
+                                  (gitResult.valid ? (
+                                    <svg
+                                      width="15"
+                                      height="15"
+                                      viewBox="0 0 15 15"
+                                      fill="none"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        d="M2 7.3C2.73333 8.2 4.32571 10 4.82857 10C5.33143 10 10.4857 6 13 4"
+                                        stroke="#2F855A"
+                                        strokeLinecap="round"
+                                      />
+                                    </svg>
+                                  ) : (
+                                    <svg
+                                      width="15"
+                                      height="15"
+                                      viewBox="0 0 15 15"
+                                      fill="none"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        d="M11.3546 11.7377C9.14862 8.96478 4.53981 3.38316 3.75273 3.23998"
+                                        stroke="#D32F2F"
+                                        strokeLinecap="round"
+                                      />
+                                      <path
+                                        d="M3.75279 11.7377C5.9588 8.96478 10.5676 3.38316 11.3547 3.23998"
+                                        stroke="#D32F2F"
+                                        strokeLinecap="round"
+                                      />
+                                    </svg>
+                                  ))
+                                )}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
-                        <div className="w-full flex flex-col gap-1">
-                          {/* <p className="text-xs text-neutral-700">Input for GitHub PAT</p> */}
+                        <div className="relative w-full flex items-center">
                           <input
+                            value={vercelToken || ""}
+                            onChange={({ target }) => {
+                              setVercelToken(target.value);
+                              setVercelResult(null);
+                            }}
                             type="text"
-                            placeholder="Ender your Vercel Token"
-                            className="rounded-sm bg-neutral-950 text-xs border py-2 px-3 w-full border-neutral-800 outline-0"
+                            placeholder="Input for Vercel Token"
+                            className={`rounded-sm bg-neutral-950 text-xs border py-2 px-3 w-full ${
+                              vercelResult
+                                ? vercelResult?.valid
+                                  ? "border-green-800 text-green-800"
+                                  : "border-red-800 text-red-800"
+                                : "border-neutral-800"
+                            } outline-0`}
                           />
+
+                          {vercelResult && !vercelResult?.valid && (
+                            <p className="absolute text-red-800 -bottom-4 text-[0.6rem]">
+                              - {vercelResult?.missingScopes}
+                            </p>
+                          )}
+
+                          <AnimatePresence>
+                            {(loading || vercelResult) && (
+                              <motion.div
+                                key="loader"
+                                initial={{ opacity: 0, scale: 0 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0 }}
+                                className={`absolute -right-1.5 -bottom-1.5 p-1 rounded-full border ${
+                                  vercelResult
+                                    ? vercelResult.valid
+                                      ? "border-green-800 bg-neutral-950"
+                                      : "border-red-800 bg-neutral-950"
+                                    : "border-neutral-800 bg-neutral-950"
+                                }`}
+                              >
+                                {loading ? (
+                                  <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{
+                                      repeat: Infinity,
+                                      duration: 1,
+                                      ease: "linear",
+                                    }}
+                                    className="w-3 h-3 border-2 border-x-blue-500 border-gray-950 rounded-full"
+                                  />
+                                ) : vercelResult?.valid ? (
+                                  <svg
+                                    width="15"
+                                    height="15"
+                                    viewBox="0 0 15 15"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                  >
+                                    <path
+                                      d="M2 7.3C2.73333 8.2 4.32571 10 4.82857 10C5.33143 10 10.4857 6 13 4"
+                                      stroke="#2F855A"
+                                      strokeLinecap="round"
+                                    />
+                                  </svg>
+                                ) : (
+                                  <svg
+                                    width="15"
+                                    height="15"
+                                    viewBox="0 0 15 15"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                  >
+                                    <path
+                                      d="M11.3546 11.7377C9.14862 8.96478 4.53981 3.38316 3.75273 3.23998"
+                                      stroke="#D32F2F"
+                                      stroke-linecap="round"
+                                    />
+                                    <path
+                                      d="M3.75279 11.7377C5.9588 8.96478 10.5676 3.38316 11.3547 3.23998"
+                                      stroke="#D32F2F"
+                                      stroke-linecap="round"
+                                    />
+                                  </svg>
+                                )}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       </div>
                     </div>
@@ -373,7 +594,6 @@ const Modal = ({
               </AnimatePresence>
             </div>
 
-            {/* Footer buttons */}
             <div className="flex justify-between">
               {step > 1 ? (
                 <button
