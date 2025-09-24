@@ -13,7 +13,7 @@ export default function ChainedPaths() {
   const animatePath = (
     path: SVGPathElement,
     segment = 200,
-    speed = 220,
+    // speed = 220,
     idx = 0
   ): Promise<void> => {
     return new Promise((resolve) => {
@@ -31,7 +31,7 @@ export default function ChainedPaths() {
 
       const durationMs = 2000;
       const distance = Math.max(0, L - segment);
-      let start = performance.now();
+      const start = performance.now();
 
       const step = (now: number) => {
         const elapsed = now - start;
@@ -58,8 +58,8 @@ export default function ChainedPaths() {
 
       // Animate first two paths in parallel
       await Promise.all([
-        animatePath(pathRefs.current[0]!, 325, 325, 0),
-        animatePath(pathRefs.current[1]!, 325, 325, 1),
+        animatePath(pathRefs.current[0]!, 325, 0),
+        animatePath(pathRefs.current[1]!, 325, 1),
       ]);
 
       // Show third path
@@ -99,7 +99,7 @@ export default function ChainedPaths() {
       >
         {/* Path 1 */}
         <path
-          ref={(el) => (pathRefs.current[0] = el)}
+          ref={(el) => { pathRefs.current[0] = el }}
           d="M80.5001 -45.5C135.333 -35.8333 234.9 13.9 188.5 97.5C130.5 202 138.5 294 225 306.5C311.5 319 362.5 253.5 354 194C345.277 132.941 234.132 53.4917 60.5001 285C-58.0001 443 24.0001 563 121.5 554C233 543.708 384.231 377.336 386 375.5C506 251 592 405 689.5 338"
           stroke="#656565"
           strokeWidth="2"
@@ -108,7 +108,7 @@ export default function ChainedPaths() {
 
         {/* Path 2 */}
         <path
-          ref={(el) => (pathRefs.current[1] = el)}
+          ref={(el) => { pathRefs.current[1] = el }}
           d="M996 757.975C941.167 748.308 841.6 698.575 888 614.975C946 510.475 938 418.475 851.5 405.975C765 393.475 714 458.975 722.5 518.475C731.223 579.534 842.368 658.983 1016 427.475C1134.5 269.475 1052.5 149.475 955 158.475C843.5 168.767 692.269 335.139 690.5 336.975C570.5 461.475 484.5 307.475 387 374.475"
           stroke="#656565"
           strokeWidth="2"
