@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const userRes = await fetch("https://api.vercel.com/v4/user", {
+  const userRes = await fetch("https://api.vercel.com/", {
     headers: {
       Authorization: `Bearer ${token}`,
     },

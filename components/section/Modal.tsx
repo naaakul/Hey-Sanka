@@ -2,6 +2,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
 import { Arrow } from "@/components/ui/Arrow";
+import { useRouter } from "next/navigation";
 
 interface gitToken {
   valid: boolean;
@@ -21,6 +22,7 @@ const Modal = ({
   reveal: boolean;
   setReveal: (value: boolean) => void;
 }) => {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState<"next" | "prev">("next");
   const [gitToken, setGitToken] = useState<string | null>(null);
@@ -39,13 +41,14 @@ const Modal = ({
     setVercelResult(null);
 
     try {
+      let ghData, vcData;
       if (!gitResult?.valid) {
         const ghRes = await fetch("/api/check-github-token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token: gitToken }),
         });
-        const ghData = await ghRes.json();
+        ghData = await ghRes.json();
         setGitResult(ghData);
       }
 
@@ -55,8 +58,15 @@ const Modal = ({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token: vercelToken }),
         });
-        const vcData = await vcRes.json();
+        vcData = await vcRes.json();
         setVercelResult(vcData);
+      }
+
+      if (ghData?.valid && vcData?.valid) {
+        localStorage.setItem("github_token", gitToken || "");
+        localStorage.setItem("vercel_token", vercelToken || "");
+
+        router.push("/dome");
       }
     } catch (err) {
       console.error(err);
