@@ -12,6 +12,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
