@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateApp } from "@/lib/mcp/generate";
-// import { host } from "@/lib/mcp/host";
-// import { push } from "@/lib/mpc/push";
-// import { deploy } from "@/lib/mcp/deploy";
+import makeZip from "@/lib/makeZip";
+import { host } from "@/lib/mcp/host";
+import push from "@/lib/mcp/push";
+import deploy from "@/lib/mcp/deploy";
+// interface File {
+//   path: string;
+//   content: string;
+// }
+
+// interface pushProp {
+//   name: string;
+//   files: File[];
+//   GIT_PAT: string;
+// }
 
 export async function POST(req: NextRequest) {
   try {
-    const { command, files } = await req.json();
+    const { command } = await req.json();
+
 
     if (!command || typeof command !== "string") {
       return NextResponse.json(
@@ -27,30 +39,39 @@ export async function POST(req: NextRequest) {
 
     if (genMatch) {
       const appName = genMatch[1].trim();
-      const zipBuffer = await generateApp(appName);
+      const files = await generateApp(appName);
+      const hostLink = await host(files);
+      const zipBuffer = await makeZip(files);
 
-      // const hosted = await host(files); 
-
-      return NextResponse.json({
-        message: `Generated and hosted ${appName} successfully.`,
-        downloadLink: `/api/download/${appName
-          .replace(/\s+/g, "-")
-          .toLowerCase()}-app.zip`,
-        // hostedLink: hosted?.url || null,
-      });
+      return NextResponse.json(
+        {
+          zip: Array.from(new Uint8Array(zipBuffer)),
+          hostLink: hostLink || null,
+        },
+        {
+          headers: {
+            "Content-Type": "link/zip",
+            "Content-Disposition": `attachment; filename="${appName}.zip"`,
+          },
+        }
+      );
     }
 
     if (pushMatch) {
-      // await push(files);
-      return NextResponse.json({ message: "Files pushed successfully." });
+      const { GIT_PAT, files, name } = await req.json();
+      const gitLink = await push({ name, files, GIT_PAT });
+      return NextResponse.json({
+        message: "Files pushed successfully.",
+        gitLink: gitLink,
+      });
     }
 
     if (deployMatch) {
-      const name = deployMatch[1].trim();
-      // const result = await deploy(name);
+      const { repoFullName, VERCEL_TOKEN } = await req.json();
+      const result = await deploy({ repoFullName, VERCEL_TOKEN });
       return NextResponse.json({
         message: `App '${name}' deployed successfully.`,
-        // deployUrl: result?.url || null,
+        deployUrl: result?.url || null,
       });
     }
 

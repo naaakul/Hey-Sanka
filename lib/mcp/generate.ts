@@ -1,5 +1,4 @@
 import Groq from "groq-sdk";
-import JSZip from "jszip";
 import { SCAFFOLD_SYSTEM_PROMPT } from "@/lib/prompts/scaffold-prompt";
 
 const groq = new Groq({
@@ -26,13 +25,13 @@ Return a JSON with "files": [{ "path": "file path", "content": "file content" }]
   // console.log("chat completion ", chatCompletion)
 
   let text = chatCompletion.choices[0]?.message?.content || "";
-  
+
   text = text
-  .replace(/^```json\s*/i, "")
-  .replace(/^```\s*/i, "")
-  .replace(/```$/i, "")
-  .trim();
-  
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```$/i, "")
+    .trim();
+
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error("No valid JSON object found in response");
   const config = JSON.parse(match[0]);
@@ -41,15 +40,15 @@ Return a JSON with "files": [{ "path": "file path", "content": "file content" }]
     throw new Error("Invalid response: files is not an array");
   }
 
-  const zip = new JSZip();
-  for (const file of config.files) {
+  // const zip = new JSZip();
+  // for (const file of config.files) {
+  //   zip.file(file.path, file.content);
+  // }
   // console.log("file - ", file)
-  zip.file(file.path, file.content);
-}
-// console.log("zip - ", zip)
+  // console.log("zip - ", zip)
 
-const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+  // const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
-// console.log("zip - ", zipBuffer)
-  return zipBuffer;
+  // console.log("zip - ", zipBuffer)
+  return config.files;
 }

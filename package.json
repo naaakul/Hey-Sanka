@@ -9,9 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@octokit/rest": "^22.0.0",
     "@paper-design/shaders-react": "^0.0.54",
+    "@vercel/sdk": "^1.13.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "e2b": "^2.2.7",
     "groq-sdk": "^0.33.0",
     "gsap": "^3.13.0",
     "jszip": "^3.10.1",
