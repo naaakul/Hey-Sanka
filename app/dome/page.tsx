@@ -16,6 +16,7 @@ const Page = () => {
   const [Chats, setChats] = useState<ChatItem[]>([]);
   const [currentTurn, setCurrentTurn] = useState<ChatItem | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const mcpWsRef = useRef<WebSocket | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const [isListening, setIsListening] = useState(false);
 
@@ -27,15 +28,20 @@ const Page = () => {
   const blurPx = useTransform(amplitudeSpring, (v) => Math.min(80, v));
   const blurFilter = useTransform(blurPx, (v) => `blur(${v * 3 + 30}px)`);
 
-  useEffect(() => {
-    const url =
-      (process.env.NEXT_PUBLIC_WSS_URL as string) ||
-      "https://hey-sanka-wss.onrender.com";
-    const ws = new WebSocket(url);
+   useEffect(() => {
+    const speechUrl = process.env.NEXT_PUBLIC_WSS_URL || "ws://localhost:8080";
+    const mcpUrl = process.env.NEXT_PUBLIC_MCP_WSS_URL || "ws://localhost:8081";
+
+    const ws = new WebSocket(speechUrl);
+    const mcp = new WebSocket(mcpUrl);
+
     wsRef.current = ws;
+    mcpWsRef.current = mcp;
 
-    ws.onopen = () => console.log("WS open", url);
+    ws.onopen = () => console.log("Speech WS connected");
+    mcp.onopen = () => console.log("MCP WS connected");
 
+    // handle speech server messages
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -51,32 +57,88 @@ const Page = () => {
           }
         }
 
+        // when speech is finalized → send to MCP
         if (data.final) {
-          const finalizedTurn: ChatItem = {
-            user: { mess: data.final },
-            bot: {
-              mess: `done nakul, I generated a TODO app for you based on: "${data.final.slice(
-                0,
-                120
-              )}"`,
-            },
-          };
-          setChats((prev) => [...prev, finalizedTurn]);
+          handleSendToMCP(data.final);
           setCurrentTurn(null);
-
-          handleGenerateAndSendTTS(data.final);
         }
 
         if (data.audio) playAudio(data.audio);
-        if (data.error) console.error("Server error:", data);
+        if (data.error) console.error("Speech WS error:", data);
       } catch (err) {
-        console.warn("Invalid WS message", event.data);
+        console.warn("Invalid WS1 message", event.data);
       }
     };
 
-    ws.onerror = (e) => console.error("WS error", e);
-    return () => ws.close();
+    // handle MCP messages
+    mcp.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        // if the MCP sent a bot message
+        if (data.bot) {
+          const newChat = {
+            user: currentTurn?.user || { mess: "..." },
+            bot: { mess: data.bot.mess },
+          };
+
+          // Add bot reply to chat
+          setChats((prev) => [...prev, newChat]);
+
+          // If MCP also sent a zip, store or download it
+          if (data.bot.zip) {
+            console.log("Zip file received (base64):", data.bot.zip);
+            // You could auto-download:
+            // const blob = b64toBlob(data.bot.zip, "application/zip");
+            // const url = URL.createObjectURL(blob);
+            // window.open(url);
+          }
+
+          // Send bot speech to TTS
+          handleGenerateAndSendTTS(data.bot.mess);
+        }
+      } catch (err) {
+        console.error("Invalid MCP WS message:", event.data);
+      }
+    };
+
+    ws.onerror = (e) => console.error("Speech WS error", e);
+    mcp.onerror = (e) => console.error("MCP WS error", e);
+
+    return () => {
+      ws.close();
+      mcp.close();
+    };
   }, []);
+
+  // send final transcript to MCP
+  const handleSendToMCP = (finalTranscript: string) => {
+    if (!mcpWsRef.current || mcpWsRef.current.readyState !== WebSocket.OPEN) {
+      console.warn("MCP WS not ready");
+      return;
+    }
+    mcpWsRef.current.send(JSON.stringify({ prompt: finalTranscript }));
+  };
+
+  const handleGenerateAndSendTTS = async (text: string) => {
+    if (!wsRef.current) return;
+    wsRef.current.send(JSON.stringify({ event: "tts", text }));
+  };
+
+  // const handleSendToMCP = (finalTranscript: string) => {
+  //   if (!mcpWsRef.current || mcpWsRef.current.readyState !== WebSocket.OPEN) {
+  //     console.warn("MCP WS not ready");
+  //     return;
+  //   }
+
+  //   // Send transcript to MCP server
+  //   mcpWsRef.current.send(
+  //     JSON.stringify({
+  //       event: "process_text",
+  //       input: finalTranscript,
+  //     })
+  //   );
+  // };
 
   const playAudio = (base64: string) => {
     const audioData = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
@@ -85,18 +147,18 @@ const Page = () => {
     new Audio(url).play();
   };
 
-  const handleGenerateAndSendTTS = async (prompt: string) => {
-    if (!wsRef.current) return;
-    try {
-      const generatedText = `done nakul, I generated a TODO app for you based on: "${prompt.slice(
-        0,
-        120
-      )}"`;
-      wsRef.current.send(JSON.stringify({ event: "tts", text: generatedText }));
-    } catch (err) {
-      console.error("generate error", err);
-    }
-  };
+  // const handleGenerateAndSendTTS = async (prompt: string) => {
+  //   if (!wsRef.current) return;
+  //   try {
+  //     const generatedText = `bolta, I generated a TODO app for you based on: "${prompt.slice(
+  //       0,
+  //       120
+  //     )}"`;
+  //     wsRef.current.send(JSON.stringify({ event: "tts", text: generatedText }));
+  //   } catch (err) {
+  //     console.error("generate error", err);
+  //   }
+  // };
 
   const startMic = async () => {
     if (!wsRef.current) return;
