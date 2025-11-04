@@ -14,11 +14,12 @@ type ChatItem = {
 const Page = () => {
   const [started, setStarted] = useState(false);
   const [Chats, setChats] = useState<ChatItem[]>([]);
-  const [currentTurn, setCurrentTurn] = useState<ChatItem | null>(null);
+  const [currentTurn, setCurrentTurn] = useState<{ mess: string } | null>(null);
+  const [isListening, setIsListening] = useState(false);
+
   const wsRef = useRef<WebSocket | null>(null);
   const mcpWsRef = useRef<WebSocket | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
-  const [isListening, setIsListening] = useState(false);
 
   const amplitudeRaw = useMotionValue(0);
   const amplitudeSpring = useSpring(amplitudeRaw, {
@@ -28,7 +29,7 @@ const Page = () => {
   const blurPx = useTransform(amplitudeSpring, (v) => Math.min(80, v));
   const blurFilter = useTransform(blurPx, (v) => `blur(${v * 3 + 30}px)`);
 
-   useEffect(() => {
+  useEffect(() => {
     const speechUrl = process.env.NEXT_PUBLIC_WSS_URL || "ws://localhost:8080";
     const mcpUrl = process.env.NEXT_PUBLIC_MCP_WSS_URL || "ws://localhost:8081";
 
@@ -41,25 +42,31 @@ const Page = () => {
     ws.onopen = () => console.log("Speech WS connected");
     mcp.onopen = () => console.log("MCP WS connected");
 
-    // handle speech server messages
+    // ───── SPEECH WS ─────
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
 
+        // Live transcript updates
         if (data.transcript) {
-          if (!currentTurn) {
-            setCurrentTurn({
-              user: { mess: data.transcript },
-              bot: { mess: "" },
-            });
-          } else {
-            setCurrentTurn({ ...currentTurn, user: { mess: data.transcript } });
-          }
+          setCurrentTurn({ mess: data.transcript });
         }
 
-        // when speech is finalized → send to MCP
+        // Final transcript → send to MCP
         if (data.final) {
-          handleSendToMCP(data.final);
+          const userMess = data.final.trim();
+          if (!userMess) return;
+
+          // Append user message to chat immediately
+          setChats((prev) => [
+            ...prev,
+            { user: { mess: userMess }, bot: { mess: "" } },
+          ]);
+
+          // Send command to MCP
+          handleSendToMCP(userMess);
+
+          // Reset the live transcript
           setCurrentTurn(null);
         }
 
@@ -70,32 +77,32 @@ const Page = () => {
       }
     };
 
-    // handle MCP messages
+    // ───── MCP WS ─────
     mcp.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-
-        // if the MCP sent a bot message
         if (data.bot) {
-          const newChat = {
-            user: currentTurn?.user || { mess: "..." },
-            bot: { mess: data.bot.mess },
-          };
+          const botMess = data.bot.mess;
 
-          // Add bot reply to chat
-          setChats((prev) => [...prev, newChat]);
+          // Update the *latest* chat’s bot message
+          setChats((prev) => {
+            if (prev.length === 0) return prev;
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              ...updated[updated.length - 1],
+              bot: {
+                ...updated[updated.length - 1].bot,
+                mess: botMess,
+                ...data.bot,
+              },
+            };
+            return updated;
+          });
 
-          // If MCP also sent a zip, store or download it
-          if (data.bot.zip) {
-            console.log("Zip file received (base64):", data.bot.zip);
-            // You could auto-download:
-            // const blob = b64toBlob(data.bot.zip, "application/zip");
-            // const url = URL.createObjectURL(blob);
-            // window.open(url);
-          }
+          if (data.bot.zip) console.log("Zip received:", data.bot.zip);
 
-          // Send bot speech to TTS
-          handleGenerateAndSendTTS(data.bot.mess);
+          // TTS playback
+          handleGenerateAndSendTTS(botMess);
         }
       } catch (err) {
         console.error("Invalid MCP WS message:", event.data);
@@ -111,34 +118,29 @@ const Page = () => {
     };
   }, []);
 
-  // send final transcript to MCP
+  // ───── HELPERS ─────
   const handleSendToMCP = (finalTranscript: string) => {
     if (!mcpWsRef.current || mcpWsRef.current.readyState !== WebSocket.OPEN) {
       console.warn("MCP WS not ready");
       return;
     }
-    mcpWsRef.current.send(JSON.stringify({ prompt: finalTranscript }));
+
+    const gitToken = localStorage.getItem("github_token") || "";
+    const vercelToken = localStorage.getItem("vercel_token") || "";
+
+    mcpWsRef.current.send(
+      JSON.stringify({
+        command: finalTranscript,
+        github_token: gitToken,
+        vercel_token: vercelToken,
+      })
+    );
   };
 
-  const handleGenerateAndSendTTS = async (text: string) => {
+  const handleGenerateAndSendTTS = (text: string) => {
     if (!wsRef.current) return;
     wsRef.current.send(JSON.stringify({ event: "tts", text }));
   };
-
-  // const handleSendToMCP = (finalTranscript: string) => {
-  //   if (!mcpWsRef.current || mcpWsRef.current.readyState !== WebSocket.OPEN) {
-  //     console.warn("MCP WS not ready");
-  //     return;
-  //   }
-
-  //   // Send transcript to MCP server
-  //   mcpWsRef.current.send(
-  //     JSON.stringify({
-  //       event: "process_text",
-  //       input: finalTranscript,
-  //     })
-  //   );
-  // };
 
   const playAudio = (base64: string) => {
     const audioData = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
@@ -146,19 +148,6 @@ const Page = () => {
     const url = URL.createObjectURL(blob);
     new Audio(url).play();
   };
-
-  // const handleGenerateAndSendTTS = async (prompt: string) => {
-  //   if (!wsRef.current) return;
-  //   try {
-  //     const generatedText = `bolta, I generated a TODO app for you based on: "${prompt.slice(
-  //       0,
-  //       120
-  //     )}"`;
-  //     wsRef.current.send(JSON.stringify({ event: "tts", text: generatedText }));
-  //   } catch (err) {
-  //     console.error("generate error", err);
-  //   }
-  // };
 
   const startMic = async () => {
     if (!wsRef.current) return;
@@ -177,12 +166,9 @@ const Page = () => {
 
     processor.onaudioprocess = (e) => {
       const inputData = e.inputBuffer.getChannelData(0);
-
-      // RMS calculation
       let sum = 0;
       for (let i = 0; i < inputData.length; i++) sum += inputData[i] ** 2;
       const rms = Math.sqrt(sum / inputData.length);
-
       amplitudeRaw.set(rms * 200);
 
       const buffer = new ArrayBuffer(inputData.length * 2);
@@ -204,7 +190,6 @@ const Page = () => {
     if (!wsRef.current) return;
     wsRef.current.send(JSON.stringify({ event: "stop" }));
     setIsListening(false);
-
     if (processorRef.current) {
       processorRef.current.disconnect();
       processorRef.current = null;
@@ -240,7 +225,16 @@ const Page = () => {
             stopMic={stopMic}
             startMic={startMic}
           />
-          <Chat Chats={currentTurn ? [...Chats, currentTurn] : Chats} />
+          <Chat
+            Chats={
+              currentTurn
+                ? [
+                    ...Chats,
+                    { user: { mess: currentTurn.mess }, bot: { mess: "..." } },
+                  ]
+                : Chats
+            }
+          />
         </div>
       </div>
     </ProtectedRoute>

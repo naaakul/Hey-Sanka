@@ -32,9 +32,9 @@ export const Go = ({ started, startMic }: GoProps) => {
             exit={{ opacity: 0, scale: 0.5, filter: "blur(6px)" }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
             onClick={startMic}
-            className="h-28 w-28 flex justify-center items-center bg-[#0b0b0b] text-white rounded-full cursor-pointer border border-neutral-800"
+            className="h-28 w-28 flex justify-center items-center bg-orange-900/35 hover:bg-orange-900/40 border border-orange-900 text-white rounded-full cursor-pointer"
           >
-            <p className="text-3xl font-bold">Go!</p>
+            <p className="text-3xl font-bold ">Go!</p>
           </motion.button>
         </motion.div>
       )}
@@ -53,7 +53,7 @@ export const PlayPause = ({ started, isListening, stopMic, startMic }: PlayPause
           exit={{ opacity: 0, scale: 0.8, filter: "blur(12px)" }}
           transition={{ duration: 0.4, ease: "easeInOut" }}
           onClick={isListening ? stopMic : startMic}
-          className="fixed bottom-6 right-6 w-22 h-8 rounded-md flex justify-center items-center bg-[#0b0b0b] text-white cursor-pointer border border-neutral-800 z-50 shadow-lg"
+          className="fixed bottom-6 right-6 w-22 h-8 flex justify-center items-center bg-orange-900/35 rounded-lg hover:bg-orange-900/40 border border-orange-900 text-white cursor-pointer z-50 shadow-lg"
         >
           <AnimatePresence mode="wait" initial={false}>
             {isListening ? (
