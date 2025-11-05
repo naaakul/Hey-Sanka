@@ -22,10 +22,7 @@ const Page = () => {
   const processorRef = useRef<ScriptProcessorNode | null>(null);
 
   const amplitudeRaw = useMotionValue(0);
-  const amplitudeSpring = useSpring(amplitudeRaw, {
-    stiffness: 120,
-    damping: 22,
-  });
+  const amplitudeSpring = useSpring(amplitudeRaw, { stiffness: 120, damping: 22 });
   const blurPx = useTransform(amplitudeSpring, (v) => Math.min(80, v));
   const blurFilter = useTransform(blurPx, (v) => `blur(${v * 3 + 30}px)`);
 
@@ -47,26 +44,14 @@ const Page = () => {
       try {
         const data = JSON.parse(event.data);
 
-        // Live transcript updates
-        if (data.transcript) {
-          setCurrentTurn({ mess: data.transcript });
-        }
+        if (data.transcript) setCurrentTurn({ mess: data.transcript });
 
-        // Final transcript → send to MCP
         if (data.final) {
           const userMess = data.final.trim();
           if (!userMess) return;
 
-          // Append user message to chat immediately
-          setChats((prev) => [
-            ...prev,
-            { user: { mess: userMess }, bot: { mess: "" } },
-          ]);
-
-          // Send command to MCP
+          setChats((prev) => [...prev, { user: { mess: userMess }, bot: { mess: "" } }]);
           handleSendToMCP(userMess);
-
-          // Reset the live transcript
           setCurrentTurn(null);
         }
 
@@ -84,7 +69,6 @@ const Page = () => {
         if (data.bot) {
           const botMess = data.bot.mess;
 
-          // Update the *latest* chat’s bot message
           setChats((prev) => {
             if (prev.length === 0) return prev;
             const updated = [...prev];
@@ -99,9 +83,6 @@ const Page = () => {
             return updated;
           });
 
-          if (data.bot.zip) console.log("Zip received:", data.bot.zip);
-
-          // TTS playback
           handleGenerateAndSendTTS(botMess);
         }
       } catch (err) {
@@ -128,13 +109,14 @@ const Page = () => {
     const gitToken = localStorage.getItem("github_token") || "";
     const vercelToken = localStorage.getItem("vercel_token") || "";
 
-    mcpWsRef.current.send(
-      JSON.stringify({
-        command: finalTranscript,
-        github_token: gitToken,
-        vercel_token: vercelToken,
-      })
-    );
+    const payload = {
+      command: finalTranscript,
+      github_token: gitToken,
+      vercel_token: vercelToken,
+    };
+
+    mcpWsRef.current.send(JSON.stringify(payload));
+    console.log("send -> ", JSON.stringify(payload));
   };
 
   const handleGenerateAndSendTTS = (text: string) => {
@@ -177,12 +159,7 @@ const Page = () => {
         const s = Math.max(-1, Math.min(1, inputData[i]));
         view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
       }
-      wsRef.current?.send(
-        JSON.stringify({
-          event: "audio",
-          audio: Array.from(new Uint8Array(buffer)),
-        })
-      );
+      wsRef.current?.send(JSON.stringify({ event: "audio", audio: Array.from(new Uint8Array(buffer)) }));
     };
   };
 
@@ -201,9 +178,7 @@ const Page = () => {
       <div className="w-full h-screen bg-[conic-gradient(at_center,_#c6750c,_#beae60,_#d7cbc6,_#c6750c,_#beae60,_#d7cbc6,_#c6750c,_#beae60,_#d7cbc6,#c6750c)]">
         <motion.div
           className="w-full h-full bg-black rounded-4xl absolute inset-0 z-30"
-          style={{
-            filter: blurFilter,
-          }}
+          style={{ filter: blurFilter }}
         >
           <Dithering
             className="h-full w-full"
@@ -219,22 +194,8 @@ const Page = () => {
 
         <div className="w-full h-full flex flex-col justify-center items-center absolute inset-0 z-40">
           <Go started={started} startMic={startMic} />
-          <PlayPause
-            started={started}
-            isListening={isListening}
-            stopMic={stopMic}
-            startMic={startMic}
-          />
-          <Chat
-            Chats={
-              currentTurn
-                ? [
-                    ...Chats,
-                    { user: { mess: currentTurn.mess }, bot: { mess: "..." } },
-                  ]
-                : Chats
-            }
-          />
+          <PlayPause started={started} isListening={isListening} stopMic={stopMic} startMic={startMic} />
+          <Chat Chats={currentTurn ? [...Chats, { user: { mess: currentTurn.mess }, bot: { mess: "..." } }] : Chats} />
         </div>
       </div>
     </ProtectedRoute>

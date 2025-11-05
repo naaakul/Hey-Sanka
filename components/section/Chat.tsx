@@ -1,5 +1,7 @@
 import React from "react";
 import { DownloadIcon } from "../ui/download-icon";
+import Link from "next/link";
+import { Arrow } from "../ui/Arrow";
 
 type ChatItem = {
   user: { mess: string };
@@ -43,9 +45,7 @@ const Chat = ({ Chats }: { Chats: ChatItem[] }) => {
               {chat.user.mess}
             </p>
 
-            <p className="self-end max-w-[70%] py-1 rounded">
-              {chat.bot.mess}
-            </p>
+            <p className="self-end max-w-[70%] py-1 rounded">{chat.bot.mess}</p>
             {chat.bot.zip && (
               <button
                 onClick={() => handleDownload(chat.bot.zip!)}
@@ -53,6 +53,16 @@ const Chat = ({ Chats }: { Chats: ChatItem[] }) => {
               >
                 Download ZIP <DownloadIcon />
               </button>
+            )}
+            {chat.bot.link && (
+              <Link
+                href={chat.bot.link}
+                onClick={() => handleDownload(chat.bot.zip!)}
+                className="py-1 text-md flex gap-1 justify-center items-center cursor-pointer self-end hover:text-orange-700/40 text-orange-500 transition-colors"
+              >
+                {chat.bot.link}
+                <Arrow className="-rotate-45 pt-1" size={17} />
+              </Link>
             )}
           </div>
         ))}
