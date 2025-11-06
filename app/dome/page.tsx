@@ -22,7 +22,10 @@ const Page = () => {
   const processorRef = useRef<ScriptProcessorNode | null>(null);
 
   const amplitudeRaw = useMotionValue(0);
-  const amplitudeSpring = useSpring(amplitudeRaw, { stiffness: 120, damping: 22 });
+  const amplitudeSpring = useSpring(amplitudeRaw, {
+    stiffness: 120,
+    damping: 22,
+  });
   const blurPx = useTransform(amplitudeSpring, (v) => Math.min(80, v));
   const blurFilter = useTransform(blurPx, (v) => `blur(${v * 3 + 30}px)`);
 
@@ -50,7 +53,10 @@ const Page = () => {
           const userMess = data.final.trim();
           if (!userMess) return;
 
-          setChats((prev) => [...prev, { user: { mess: userMess }, bot: { mess: "" } }]);
+          setChats((prev) => [
+            ...prev,
+            { user: { mess: userMess }, bot: { mess: "" } },
+          ]);
           handleSendToMCP(userMess);
           setCurrentTurn(null);
         }
@@ -115,6 +121,8 @@ const Page = () => {
       vercel_token: vercelToken,
     };
 
+    console.log(finalTranscript);
+
     mcpWsRef.current.send(JSON.stringify(payload));
     console.log("send -> ", JSON.stringify(payload));
   };
@@ -159,7 +167,12 @@ const Page = () => {
         const s = Math.max(-1, Math.min(1, inputData[i]));
         view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
       }
-      wsRef.current?.send(JSON.stringify({ event: "audio", audio: Array.from(new Uint8Array(buffer)) }));
+      wsRef.current?.send(
+        JSON.stringify({
+          event: "audio",
+          audio: Array.from(new Uint8Array(buffer)),
+        })
+      );
     };
   };
 
@@ -194,8 +207,22 @@ const Page = () => {
 
         <div className="w-full h-full flex flex-col justify-center items-center absolute inset-0 z-40">
           <Go started={started} startMic={startMic} />
-          <PlayPause started={started} isListening={isListening} stopMic={stopMic} startMic={startMic} />
-          <Chat Chats={currentTurn ? [...Chats, { user: { mess: currentTurn.mess }, bot: { mess: "..." } }] : Chats} />
+          <PlayPause
+            started={started}
+            isListening={isListening}
+            stopMic={stopMic}
+            startMic={startMic}
+          />
+          <Chat
+            Chats={
+              currentTurn
+                ? [
+                    ...Chats,
+                    { user: { mess: currentTurn.mess }, bot: { mess: "..." } },
+                  ]
+                : Chats
+            }
+          />
         </div>
       </div>
     </ProtectedRoute>
