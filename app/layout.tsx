@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Dithering } from "@paper-design/shaders-react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -66,10 +67,21 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-neutral-800`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-neutral-800 relative h-min-screen w-full bg-black text-white`}
       >
-        
-          {children}
+        <div className="absolute inset-0 -z-10 h-full w-full">
+          <Dithering
+            className="h-full w-full"
+            colorBack="#000000"
+            colorFront="#101010"
+            shape="simplex"
+            type="4x4"
+            pxSize={2}
+            speed={1}
+            scale={0.6}
+          />
+        </div>
+        {children}
       </body>
     </html>
   );
