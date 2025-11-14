@@ -30,7 +30,7 @@ const Page = () => {
   const blurFilter = useTransform(blurPx, (v) => `blur(${v * 3 + 30}px)`);
 
   useEffect(() => {
-    const speechUrl = process.env.NEXT_PUBLIC_WSS_URL || "ws://localhost:8082";
+    const speechUrl = process.env.NEXT_PUBLIC_SOEECH_WSS_URL || "ws://localhost:8082";
     const mcpUrl = process.env.NEXT_PUBLIC_MCP_WSS_URL || "ws://localhost:8081";
 
     const ws = new WebSocket(speechUrl);

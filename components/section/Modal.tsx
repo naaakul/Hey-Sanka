@@ -39,6 +39,7 @@ const Modal = ({
   }, [reveal]);
 
   useEffect(() => {
+    // eslint-disable-next-line
     const handler = (e: any) => {
       if (e.key === "Enter") {
         e.preventDefault();
