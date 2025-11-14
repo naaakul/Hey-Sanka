@@ -1,6 +1,6 @@
 "use client";
 import { AnimatePresence, motion } from "framer-motion";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Arrow } from "@/components/ui/Arrow";
 import { useRouter } from "next/navigation";
 
@@ -28,15 +28,32 @@ const Modal = ({
   const [gitToken, setGitToken] = useState<string | null>(null);
   const [vercelToken, setVercelToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [gitChecking, setGitChecking] = useState<boolean>(false);
+  const [vercelChecking, setVercelChecking] = useState<boolean>(false);
   const [gitResult, setGitResult] = useState<gitToken | null>(null);
   const [vercelResult, setVercelResult] = useState<vercelToken | null>(null);
+  const nextBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setStep(1);
   }, [reveal]);
 
+  useEffect(() => {
+    const handler = (e: any) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        nextBtnRef.current?.click();
+      }
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   async function checkTokens() {
-    setLoading(true);
+    // setLoading(true);
+    setGitChecking(true);
+    setVercelChecking(true);
     setGitResult(null);
     setVercelResult(null);
 
@@ -49,6 +66,7 @@ const Modal = ({
           body: JSON.stringify({ token: gitToken }),
         });
         ghData = await ghRes.json();
+        if (ghData?.valid) setGitChecking(false);
         setGitResult(ghData);
       }
 
@@ -59,13 +77,14 @@ const Modal = ({
           body: JSON.stringify({ token: vercelToken }),
         });
         vcData = await vcRes.json();
+        if (vcData?.valid) setVercelChecking(false);
         setVercelResult(vcData);
       }
 
       if (ghData?.valid && vcData?.valid) {
         localStorage.setItem("github_token", gitToken || "");
         localStorage.setItem("vercel_token", vercelToken || "");
-
+        setLoading(true);
         router.push("/dome");
       }
     } catch (err) {
@@ -445,7 +464,7 @@ const Modal = ({
                           )}
 
                           <AnimatePresence>
-                            {(loading || gitResult) && (
+                            {(gitChecking || gitResult) && (
                               <motion.div
                                 key="loader"
                                 initial={{ opacity: 0, scale: 0 }}
@@ -459,7 +478,7 @@ const Modal = ({
                                     : "border-neutral-800 bg-neutral-950"
                                 }`}
                               >
-                                {loading ? (
+                                {gitChecking ? (
                                   <motion.div
                                     animate={{ rotate: 360 }}
                                     transition={{
@@ -535,7 +554,7 @@ const Modal = ({
                           )}
 
                           <AnimatePresence>
-                            {(loading || vercelResult) && (
+                            {(vercelChecking || vercelResult) && (
                               <motion.div
                                 key="loader"
                                 initial={{ opacity: 0, scale: 0 }}
@@ -549,7 +568,7 @@ const Modal = ({
                                     : "border-neutral-800 bg-neutral-950"
                                 }`}
                               >
-                                {loading ? (
+                                {vercelChecking ? (
                                   <motion.div
                                     animate={{ rotate: 360 }}
                                     transition={{
@@ -618,11 +637,26 @@ const Modal = ({
               )}
 
               <button
+                ref={nextBtnRef}
                 onClick={handleNext}
                 className="text-xs py-1 px-5 rounded-sm border cursor-pointer flex gap-1 border-neutral-800"
               >
-                {step === 3 ? "Save & Continue" : "Next"}
-                {!(step === 3) && <Arrow className="mb-[0.1rem]" />}
+                {loading ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: 1,
+                      ease: "linear",
+                    }}
+                    className="w-3 h-3 border-2 border-x-blue-500 border-gray-950 rounded-full"
+                  />
+                ) : (
+                  <>
+                    {step === 3 ? "Save & Continue" : "Next"}
+                    {step !== 3 && <Arrow className="mb-[0.1rem]" />}
+                  </>
+                )}
               </button>
             </div>
           </motion.div>

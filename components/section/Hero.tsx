@@ -2,6 +2,7 @@ import React from "react";
 import RevealText from "@/components/ui/RevealText";
 import { GrainGradient } from "@paper-design/shaders-react";
 import { Link000 } from "@/components/ui/skiper40";
+import { useRouter } from "next/navigation";
 
 const Hero = ({
   reveal,
@@ -10,6 +11,18 @@ const Hero = ({
   reveal: boolean;
   setReveal: (value: boolean) => void;
 }) => {
+  const router = useRouter();
+  const handleClick = () => {
+    if (
+      localStorage.getItem("github_token") &&
+      localStorage.getItem("vercel_token")
+    )
+      router.push("/dome");
+    else {
+      setReveal(!reveal);
+    }
+  };
+
   return (
     <div className="h-full grid-col-1 max-w-[50rem] mx-auto flex items-center flex-col justify-center">
       <RevealText className="w-full mb-16">
@@ -97,7 +110,7 @@ const Hero = ({
             touching a terminal.
           </p>
           <div className="w-full flex justify-center">
-            <button onClick={() => setReveal(!reveal)}>
+            <button onClick={handleClick}>
               <Link000 className="flex items-center gap-2 cursor-pointer">
                 <p className="">Get started</p>
                 <svg

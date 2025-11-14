@@ -125,6 +125,26 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* globals.css (or wherever Tailwind's CSS is imported) */
+
+@keyframes gradientMove {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+/* animate + cross-browser text clip */
+.animate-gradient {
+  display: inline-block;               /* keeps bg sizing correct */
+  background-size: 200% auto;          /* same as bg-[length:200%_auto] */
+  -webkit-background-clip: text;       /* safari */
+  background-clip: text;
+  -webkit-text-fill-color: transparent;/* safari */
+  color: transparent;
+  animation: gradientMove 4s linear infinite;
+}
+
+
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
