@@ -29,26 +29,30 @@ pipeline {
 
         stage('Upload Files to VM') {
             steps {
-                sshAgent(['vm-ssh-key']) {
-                    sh """
-                    rsync -avz --delete \
-                        --exclude='.git' \
-                        --exclude='node_modules' \
-                        ./ ${VM_USER}@${VM_HOST}:${VM_PATH}
-                    """
+                script {
+                    sshagent(credentials: ['vm-ssh-key']) {
+                        sh """
+                        rsync -avz --delete \
+                            --exclude='.git' \
+                            --exclude='node_modules' \
+                            ./ ${VM_USER}@${VM_HOST}:${VM_PATH}
+                        """
+                    }
                 }
             }
         }
 
         stage('Restart PM2 on Server') {
             steps {
-                sshAgent(['vm-ssh-key']) {
-                    sh """
-                    ssh ${VM_USER}@${VM_HOST} "
-                        cd ${VM_PATH} &&
-                        pm2 restart next-app || pm2 start npm --name next-app -- start
-                    "
-                    """
+                script {
+                    sshagent(credentials: ['vm-ssh-key']) {
+                        sh """
+                        ssh ${VM_USER}@${VM_HOST} "
+                            cd ${VM_PATH} &&
+                            pm2 restart next-app || pm2 start npm --name next-app -- start
+                        "
+                        """
+                    }
                 }
             }
         }
