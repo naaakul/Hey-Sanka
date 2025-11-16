@@ -4,7 +4,7 @@ pipeline {
     environment {
         VM_USER = "nakul"
         VM_HOST = "136.112.121.180"
-        VM_PATH = "/Hey-Sanka"
+        VM_PATH = "/home/nakul/Hey-Sanka"
         // SSH_KEY = "vm-ssh-key"
     }
 
@@ -32,7 +32,7 @@ pipeline {
                 script {
                     sshagent(credentials: ['vm-ssh-key']) {
                         sh """
-                        rsync -avz --delete \
+                        rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" \
                             --exclude='.git' \
                             --exclude='node_modules' \
                             ./ ${VM_USER}@${VM_HOST}:${VM_PATH}
