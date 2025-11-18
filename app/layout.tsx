@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     siteName: "Hey Sanka",
     images: [
       {
-        url: "https://hey.sanka.pro/og-image.png",
+        url: "https://hey.sanka.pro/logo.png",
         width: 1200,
         height: 630,
         alt: "Hey Sanka – Voice to Code",
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     images: ["https://hey.sanka.pro/og-image.png"],
     creator: "@heynakul",
   },
-  // metadataBase: new URL("https://hey.sanka.pro"),
+  metadataBase: new URL("https://hey.sanka.pro"),
 };
 
 export default function RootLayout({
