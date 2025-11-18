@@ -5,27 +5,14 @@ import Modal from "@/components/section/Modal";
 import Hero from "@/components/section/Hero";
 import Link from "next/link";
 import { Dithering } from "@paper-design/shaders-react";
+import Navbar from "@/components/section/Navbar";
 
 const Page = () => {
   const [reveal, setReveal] = useState(false);
 
   return (
     <div className="relative h-screen w-full overflow-hidden">
-      {/* <div className="absolute inset-0 -z-10 h-full w-full">
-        <Dithering
-          className="h-full w-full"
-          // width={typeof window !== "undefined" ? window.innerWidth : 1280}
-          // height={typeof window !== "undefined" ? window.innerHeight : 720}
-          colorBack="#000000"
-          colorFront="#101010"
-          shape="simplex"
-          // shape="warp"
-          type="4x4"
-          pxSize={2}
-          speed={1}
-          scale={0.6}
-        />
-      </div> */}
+      <Navbar/  >
       <p className="absolute top-1/2 left-[48.58%] -translate-x-1/2 -translate-y-1/2 text-[#ffffff09] text-[43rem] instrument-serif">
         Sanka
       </p>
